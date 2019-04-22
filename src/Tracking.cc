@@ -887,13 +887,11 @@ void Tracking::Track()
             }
             else
             {
-	      cout<<"lost,start reloc"<<endl;
                 bOK = Relocalization();
 
                 if (bOK) 
 		{
 		  cout << "Relocalized. id: " << mCurrentFrame.mnId << endl;
-	//	  cout<<"Relocalized bOK"<<bOK<<endl;
 		}
             }
         }
@@ -916,7 +914,6 @@ void Tracking::Track()
                 if (!mpLocalMapper->GetVINSInited())
 		{
                     bOK = TrackLocalMap();
-	//	    cout<<"before init TrackLocalMap bOK"<<bOK<<endl;
 		}
 		
                 else
@@ -925,12 +922,10 @@ void Tracking::Track()
                     {
                         // 20 Frames after reloc, track with only vision
                         bOK = TrackLocalMap();
-			cout<<"20frame after relocation， TrackLocalMap bOK"<<bOK<<endl;
                     }
                     else
                     {
                         bOK = TrackLocalMapWithIMU(bMapUpdated);//替换了原来的TrackLocalMap()；
-			cout<<"TrackLocalMapWithIMU bOK"<<bOK<<endl;
                     }
                 }
 #endif
@@ -949,10 +944,7 @@ void Tracking::Track()
             // Add Frames to re-compute IMU bias after reloc
             if (mbRelocBiasPrepare)
             {
-	        cout<<"VectorSize"<<mv20FramesReloc.size()<<endl;
-		cout<<"VectorCapacity"<<mv20FramesReloc.capacity()<<endl;
                 mv20FramesReloc.push_back(mCurrentFrame);
-		cout<<"push back 20 frame after reloc"<<endl;
 
                 // Before creating new keyframe
                 // Use 20 consecutive frames to re-compute IMU bias

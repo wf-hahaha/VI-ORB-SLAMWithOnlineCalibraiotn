@@ -50,8 +50,11 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
   static bool YPRFinish=false,PcbScaleFinish=false;
   static bool firstInit=true;
   float thr1=0.1;  //用于判断VI旋转角是否收敛
+  //float thr1=0.5;
   float thr2=0.01; //用于判断VI偏移角是否收敛
+  //float thr2=0.3;
   float thr3=0.02; //用于判断尺度因子scale是否收敛  
+  //float thr3=0.4;
   int Nwin=10;    //用于判断旋转角,偏移角和尺度因子是否收敛的窗口
   int Nwin2=40;  //添加窗口的大小
   
@@ -361,6 +364,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
       cv::Mat Twc2 = pKF2->GetPoseInverse();
       cv::Mat Rc1 = Twc1.rowRange(0,3).colRange(0,3);
       cv::Mat Rc2 = Twc2.rowRange(0,3).colRange(0,3);
+      
       cv::Mat dRc=Rc1.inv()*Rc2;
    //   cout<<"N=:"<<N<<endl;           
    //   cout<<"Rc2"<<Rc2<<endl;
@@ -1210,6 +1214,13 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
           
       Eigen::Matrix3d dRcEigen=Converter::toMatrix3d(dRc);
    //   cout<<"eulrc=:"<<eulrc<<endl;
+      cv::Mat pc1=Twc1.rowRange(0,3).col(3);
+   //   cout<<"pc1"<<endl<<pc1<<endl;
+      cv::Mat pc2=Twc2.rowRange(0,3).col(3);
+   //   cout<<"pc2"<<endl<<pc2<<endl;
+      cv::Mat dpc=pc2-pc1;
+      cout<<"dpc"<<endl<<dpc<<endl;
+      
       
       Eigen::Quaterniond qc = Eigen::Quaterniond ( dRcEigen );
       Sc=qc.w();
@@ -1223,7 +1234,15 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
  //     cout<<"Sc=:"<<Sc<<endl;
  //     cout<<"Vc=:"<<Vc<<endl;
             
-      cv::Mat dRb = (Converter::toCvMat(pKF2->GetIMUPreInt().getDeltaR()));//!!!!这里只是相邻关键帧之间IMU的相对旋转角，如果间隔较多的关键帧需要进行修改
+      cv::Mat dRb = Converter::toCvMat(pKF2->GetIMUPreInt().getDeltaR());//!!!!这里只是相邻关键帧之间IMU的相对旋转角，如果间隔较多的关键帧需要进行修改
+      
+      cv::Mat dpb = Converter::toCvMat(pKF2->GetIMUPreInt().getDeltaP());
+      cv::Mat sdpc=dpb-(Rc2-Rc1)*pcb_true;
+      cout<<"sdpc"<<endl<<dpb<<endl;
+      cout<<"s"<<endl<<sdpc.at<float>(0)/dpc.at<float>(0)<<"\t"<<sdpc.at<float>(1)/dpc.at<float>(1)<<"\t"<<sdpc.at<float>(2)/dpc.at<float>(2)<<endl;
+      
+      
+      
       
       Eigen::Matrix3d dRbEigen=Converter::toMatrix3d(dRb);
       Eigen::Quaterniond qb = Eigen::Quaterniond ( dRbEigen );//四元数存储的顺序是[w x y z]
@@ -2731,11 +2750,12 @@ void LocalMapping::Run()
                      else
                      {
 			 std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-		         tmpbool=TryInitVIOWithoutPreCalibration();
+		         //tmpbool=TryInitVIOWithoutPreCalibration();
+			 tmpbool = TryInitVIO();//单目的vio初始化
 			 std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 			 double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 			 fInitCalibTime<<t<<endl;
-                         //tmpbool = TryInitVIO();//单目的vio初始化
+                         
                      }
                               
                     SetVINSInited(tmpbool);
