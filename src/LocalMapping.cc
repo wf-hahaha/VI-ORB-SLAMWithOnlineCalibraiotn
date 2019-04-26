@@ -123,8 +123,8 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     if(firstInit==true)
     {
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-   //   YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-      YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
+      YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
+   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -147,8 +147,8 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     
     {
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-   //   YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-      YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
+      YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
+   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -176,8 +176,8 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     {
       //假设ba=0,求解scale，gw,pcb
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    //  ScaleGwPcbApproximationWithInfoWin(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2,Nwin2);
-      ScaleGwPcbApproximation(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2);
+      ScaleGwPcbApproximationWithInfoWin(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2,Nwin2);
+    //  ScaleGwPcbApproximation(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime2<<t<<endl;
@@ -185,8 +185,8 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     
       //引入重力大小的约束，求解scale,gw,ba,pcb_refined
       t1 = std::chrono::steady_clock::now();
-    //  PcbScaleFinish=ScaleGwBaPcbRefineWithInfoWin(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3,Nwin2);
-      PcbScaleFinish=ScaleGwBaPcbRefine(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3);
+      PcbScaleFinish=ScaleGwBaPcbRefineWithInfoWin(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3,Nwin2);
+     // PcbScaleFinish=ScaleGwBaPcbRefine(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3);
       t2 = std::chrono::steady_clock::now();
       t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime3<<t<<endl; 
@@ -423,19 +423,19 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
       {
 	cv::Mat Ji=-Qi;
   //    cout<<"Ji"<<Ji<<endl;
-        Eigen::Matrix<double,4,4> IMiEigen=(Converter::toMatrix4d(Ji.t()*Ji)).inverse();
+        Eigen::Matrix<double,4,4> IMiEigen=Converter::toMatrix4d(Ji.t()*Ji);
   //    cout<<"IMiEigen"<<IMiEigen<<endl;
-        float info=IMiEigen.determinant();
+        float info=IMiEigen.trace();
   //    cout<<"info"<<info<<endl;
       if(i==0)  //第一个数直接放在第一个位置
       {
 	  INFO[0]=info;
 	  Qi.copyTo(Q.rowRange(4*(0-0)+0,4*(0-0)+4).colRange(0,4));
-	  cout<<"i"<<i<<endl;
+	//  cout<<"i"<<i<<endl;
       }
       if(i==1)  //第二个数仅通过与第一个数比较判断放置位置
       {  
-	if(info>INFO[0]) 
+	if(info<INFO[0]) 
 	{
 	  INFO[1]=INFO[0];
 	  (Q.rowRange(4*(0-0)+0,4*(0-0)+4).colRange(0,4)).copyTo(Q.rowRange(4*(1-0)+0,4*(1-0)+4).colRange(0,4));
@@ -448,11 +448,11 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	  INFO[1]=info;
 	  Qi.copyTo(Q.rowRange(4*(1-0)+0,4*(1-0)+4).colRange(0,4));
 	}
-	cout<<"i"<<i<<endl;
+	//cout<<"i"<<i<<endl;
       } 
       if(i<Nwin2&&i>1)  //如果没有达到窗口限制，则将当前数按照info放入正确位置
       {
-	 if(info>=INFO[0])  //判断是否大于最大值
+	 if(info<=INFO[0])  //判断是否小于最小值
 	  {
 	    for(int n=i;n>0;n--)
 	    {
@@ -463,7 +463,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	    Qi.copyTo(Q.rowRange(4*(0-0)+0,4*(0-0)+4).colRange(0,4));
 	  }
 	  
-	  else if(info<=INFO[i-1]) //判断是否小于最小值
+	  else if(info>=INFO[i-1]) //判断是否大于最大值
 	  {
 	    INFO[i]=info;
 	    Qi.copyTo(Q.rowRange(4*(i-0)+0,4*(i-0)+4).colRange(0,4));
@@ -473,7 +473,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	 {
 	   for(int index=0;index<i-1;index++)
 	   {  
-	     if(info<=INFO[index]&&info>INFO[index+1])//查找插入的位置index+1
+	     if(info>=INFO[index]&&info<INFO[index+1])//查找插入的位置index+1
 	    {
 	      for(int n=i;n>index+1;n--)
 	      {
@@ -486,13 +486,13 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	    }
 	   }
 	 }//else end 
-	 cout<<"i"<<i<<endl;
+	// cout<<"i"<<i<<endl;
 	}//if end
 	
-	if(i>=Nwin2&&info<INFO[0])//只对当前info小于最大值的情况进行操作
+	if(i>=Nwin2&&info>INFO[0])//只对当前info大于最小值的情况进行操作
 	{
-	  cout<<"i=:"<<i<<endl;
-	    if(info<INFO[Nwin2-1]) //如果当前info小于最小值
+	//  cout<<"i=:"<<i<<endl;
+	    if(info>INFO[Nwin2-1]) //如果当前info大于最大值
 	    {
 	      for(int n=0;n<Nwin2-1;n++)
 	      {
@@ -503,9 +503,9 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	      Qi.copyTo(Q.rowRange(4*(Nwin2-1-0)+0,4*(Nwin2-1-0)+4).colRange(0,4));
 	    }
 	    
-	    else for(int index=0;index<Nwin2-1;index++)//如果当前info并非小于最小值，则寻找插入位置
+	    else for(int index=0;index<Nwin2-1;index++)//如果当前info并非大于最大值，则寻找插入位置
 	   {  
-	     if(info<INFO[index]&&info>=INFO[index+1])//查找插入的位置index
+	     if(info>INFO[index]&&info<=INFO[index+1])//查找插入的位置index
 	    {
 	      for(int n=0;n<index;n++)
 	      {
@@ -519,7 +519,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	   }//else end
 	}//if end
       }
-      cout<<"11"<<endl;
+   //   cout<<"11"<<endl;
     //  Qi.copyTo(Q.rowRange(4*(i-0)+0,4*(i-0)+4).colRange(0,4));
   //    cout<<"IMi"<<IMi<<endl;  //各个相邻两帧之间估计的协方差矩阵，等于信息矩阵的逆，。
    //   double inf=cv::determinant(IMi)<<endl;
@@ -529,8 +529,12 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
       
   //    cout<<"Q=:"<<Q<<endl;
     }
+    for(int i=0;i<Nwin2;i++)
+    {
+        cout<<INFO[i]<<endl;
+    }
     delete[] INFO;
-    cout<<"1!"<<endl;
+ //   cout<<"1!"<<endl;
        cv::Mat J;
        if(N<=Nwin2)
       {
@@ -543,10 +547,11 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	J=-Q;
       }
    //   cout<<"J"<<J<<endl;
-      cv::Mat IM=(J.t()*J).inv();
+      cv::Mat IM=(J.t()*J);
    //   cout<<"IM"<<IM<<endl;
    //   cout<<"information count "<<cv::determinant(IM)<<endl;
-      finf1<<cv::determinant(IM)<<endl;  
+      Eigen::Matrix<double,4,4> IMEigen=Converter::toMatrix4d(IM);
+      finf1<<IMEigen.trace()<<endl;  
       cout<<"12"<<endl;
   //    fQ<<Q<<endl;
   //    fq<<mpCurrentKeyFrame->mTimeStamp-mnStartTime<<"\t"
@@ -676,11 +681,8 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 	cv::Mat Ji2=-Ai;
 	//cv::Mat IMi=(Ji2.t()*Ji2).inv();
 	//cout<<"IMi=:"<<endl<<IMi<<endl;
-	Eigen::Matrix<double,7,7> IMiEigen2=1e-13*((Converter::toMatrix7d(Ji2.t()*Ji2)).inverse());
-	//cout<<"IMiEigen2=:"<<endl<<IMiEigen2<<endl;
-        
-	//cout<<"IMiEigen2=:"<<endl<<IMiEigen2<<endl;
-	float info2=abs(1e13*IMiEigen2.determinant());
+	Eigen::Matrix<double,7,7> IMiEigen2=Converter::toMatrix7d(Ji2.t()*Ji2);
+	float info2=IMiEigen2.trace();
 	//float info2=IMiEigen2.trace();
 	//cout<<"info2=:"<<info2<<endl;
 	if(i==0)  //第一个数直接放在第一个位置
@@ -698,7 +700,7 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
       }
       if(i==1)  //第二个数仅通过与第一个数比较判断放置位置
       {  
-	if(info2>INFO2[0]) 
+	if(info2<INFO2[0]) 
 	{
 	  INFO2[1]=INFO2[0];
 	  (A.rowRange(3*(0-0)+0,3*(0-0)+3).colRange(0,7)).copyTo(A.rowRange(3*(1-0)+0,3*(1-0)+3).colRange(0,7));
@@ -718,7 +720,7 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
       } 
       if(i<Nwin2&&i>1)  //如果没有达到窗口限制，则将当前数按照info放入正确位置
       {
-	 if(info2>=INFO2[0])  //判断是否大于最大值
+	 if(info2<=INFO2[0])  //判断是否小于最小值
 	  {
 	//    cout<<"21>"<<endl;
 	    for(int n=i;n>0;n--)
@@ -733,7 +735,7 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 
 	  }
 	  
-	  else if(info2<=INFO2[i-1]) //判断是否小于最小值
+	  else if(info2>=INFO2[i-1]) //判断是否大于最大值
 	  {
 	//    cout<<"21<"<<endl;
 	    INFO2[i]=info2;
@@ -747,7 +749,7 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 	//   cout<<"21><"<<endl;
 	   for(int index=0;index<i-1;index++)
 	   {  
-	     if(info2<=INFO2[index]&&info2>INFO2[index+1])//查找插入的位置index+1
+	     if(info2>=INFO2[index]&&info2<INFO2[index+1])//查找插入的位置index+1
 	    {
 	      for(int n=i;n>index+1;n--)
 	      {
@@ -765,11 +767,11 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 //	 cout<<"i"<<i<<endl;
 	}//if end
 	
-	if(i>=Nwin2&&info2<INFO2[0])//只对当前info小于最大值的情况进行操作
+	if(i>=Nwin2&&info2>INFO2[0])//只对当前info大于最小值的情况进行操作
 	{
 	 // cout<<"i=:"<<i<<endl;
 
-	    if(info2<INFO2[Nwin2-1]) //如果当前info小于最小值
+	    if(info2>INFO2[Nwin2-1]) //如果当前info大于最大值
 	    {
 	//      cout<<"22<"<<endl;
 	      for(int n=0;n<Nwin2-1;n++)
@@ -784,10 +786,10 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 	      Bi.copyTo(B.rowRange(3*(Nwin2-1-0)+0,3*(Nwin2-1-0)+3));
 	    }
 	    
-	    else for(int index=0;index<Nwin2-1;index++)//如果当前info并非小于最小值，则寻找插入位置
+	    else for(int index=0;index<Nwin2-1;index++)//如果当前info并非大于最大值，则寻找插入位置
 	   {  
 	//     cout<<"22><"<<endl;
-	     if(info2<INFO2[index]&&info2>=INFO2[index+1])//查找插入的位置index
+	     if(info2>INFO2[index]&&info2<=INFO2[index+1])//查找插入的位置index
 	    {
 	      for(int n=0;n<index;n++)
 	      {
@@ -806,6 +808,11 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 	
  //  cout<<"21"<<endl;
     }
+    
+    for(int i=0;i<Nwin2;i++)
+    {
+       cout<<INFO2[i]<<endl;
+    }
     delete [] INFO2;
  //   cout<<"2!"<<endl;
     cv::Mat J2=-A;
@@ -817,8 +824,9 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
 //	cout<<"Afinal=:"<<endl<<Afinal<<endl;
 //	cout<<"Bfinal=:"<<endl<<Bfinal<<endl;
       }
-    cv::Mat IM=(J2.t()*J2).inv();
-    finf2<<cv::determinant(IM)<<endl;
+    cv::Mat IM2=(J2.t()*J2);
+    Eigen::Matrix<double,7,7> IMEigen2=Converter::toMatrix7d(IM2);
+    finf2<<IMEigen2.trace()<<endl;
  //   cout<<"2222222"<<endl;
     
     cv::Mat w,u,vt;
@@ -975,9 +983,9 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 	cv::Mat Ji3=-Ci;
 //	cv::Mat IMi=(Ji3.t()*Ji3).inv();
 //	cout<<"IMi=:"<<endl<<IMi<<endl;
-	Eigen::Matrix<double,9,9> IMiEigen3=1e-13*(Converter::toMatrix9d(Ji3.t()*Ji3)).inverse();
+	Eigen::Matrix<double,9,9> IMiEigen3=Converter::toMatrix9d(Ji3.t()*Ji3);
 	//cout<<"IMiEigen3=:"<<endl<<IMiEigen3<<endl;
-	float info3=abs(1e20*IMiEigen3.determinant());
+	float info3=IMiEigen3.trace();
 	//float info3=cv::determinant(IMi);
 //	cout<<"info3=:"<<info3<<endl;
 	
@@ -990,7 +998,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
       }
       if(i==1)  //第二个数仅通过与第一个数比较判断放置位置
       {  
-	if(info3>INFO3[0]) 
+	if(info3<INFO3[0]) 
 	{
 	  INFO3[1]=INFO3[0];
 	  (C.rowRange(3*(0-0)+0,3*(0-0)+3).colRange(0,9)).copyTo(C.rowRange(3*(1-0)+0,3*(1-0)+3).colRange(0,9));
@@ -1010,7 +1018,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
       } 
       if(i<Nwin3&&i>1)  //如果没有达到窗口限制，则将当前数按照info放入正确位置
       {
-	 if(info3>=INFO3[0])  //判断是否大于最大值
+	 if(info3<=INFO3[0])  //判断是否小于最小值
 	  {
 	    for(int n=i;n>0;n--)
 	    {
@@ -1023,7 +1031,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 	    Di.copyTo(D.rowRange(3*(0-0)+0,3*(0-0)+3));
 	  }
 	  
-	  else if(info3<=INFO3[i-1]) //判断是否小于最小值
+	  else if(info3>=INFO3[i-1]) //判断是否大于最大值
 	  {
 	    INFO3[i]=info3;
 	    Ci.copyTo(C.rowRange(3*(i-0)+0,3*(i-0)+3).colRange(0,9));
@@ -1034,7 +1042,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 	 {
 	   for(int index=0;index<i-1;index++)
 	   {  
-	     if(info3<=INFO3[index]&&info3>INFO3[index+1])//查找插入的位置index+1
+	     if(info3>=INFO3[index]&&info3<INFO3[index+1])//查找插入的位置index+1
 	    {
 	      for(int n=i;n>index+1;n--)
 	      {
@@ -1052,10 +1060,10 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 //	 cout<<"i"<<i<<endl;
 	}//if end
 	
-	if(i>=Nwin3&&info3<INFO3[0])//只对当前info小于最大值的情况进行操作
+	if(i>=Nwin3&&info3>INFO3[0])//只对当前info大于最小值的情况进行操作
 	{
 	 // cout<<"i=:"<<i<<endl;
-	    if(info3<INFO3[Nwin3-1]) //如果当前info小于最小值
+	    if(info3>INFO3[Nwin3-1]) //如果当前info大于最大值
 	    {
 	      for(int n=0;n<Nwin3-1;n++)
 	      {
@@ -1070,7 +1078,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 	    
 	    else for(int index=0;index<Nwin3-1;index++)//如果当前info并非小于最小值，则寻找插入位置
 	   {  
-	     if(info3<INFO3[index]&&info3>=INFO3[index+1])//查找插入的位置index
+	     if(info3>INFO3[index]&&info3<=INFO3[index+1])//查找插入的位置index
 	    {
 	      for(int n=0;n<index;n++)
 	      {
@@ -1086,10 +1094,15 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 	   }//else end
 	}//if end*/
 	}
+
  //   cout<<"31"<<endl;
         // Debug log
         //cout<<"iter "<<i<<endl;
     }
+    	for(int i=0;i<Nwin3;i++)
+	{
+	  cout<<INFO3[i]<<endl;
+	}
     delete [] INFO3;
   //  cout<<"3!"<<endl;
     cv::Mat J3=-C;
@@ -1102,7 +1115,8 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
 //	cout<<"Bfinal=:"<<endl<<Bfinal<<endl;
       }
     cv::Mat IM3=(J3.t()*J3);
-    finf3<<cv::determinant(IM3)<<endl;
+    Eigen::Matrix<double,9,9> IMEigen3=Converter::toMatrix9d(IM3);
+    finf3<<IMEigen3.trace()<<endl;
   //  cout<<"32"<<endl;
     // Use svd to compute C*x=D, x=[s,dthetaxy,ba] 6x1 vector
     // C = u*w*vt, u*w*vt*x=D
@@ -1281,10 +1295,11 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
  
       cv::Mat J=-Q;
    //   cout<<"J"<<J<<endl;
-      cv::Mat IM=(J.t()*J).inv();
+      cv::Mat IM=J.t()*J;
+      Eigen::Matrix<double,4,4> IMEigen=Converter::toMatrix4d(IM);
    //   cout<<"IM"<<IM<<endl;
    //   cout<<"information count "<<cv::determinant(IM)<<endl;
-      finf1<<cv::determinant(IM)<<endl;  
+      finf1<<IMEigen.trace()<<endl;  
   //    cout<<"12"<<endl;
       //用svd解Q*qbc=0;
       //Q=u1*w1*vt1
@@ -1379,8 +1394,9 @@ bool LocalMapping::ScaleGwPcbApproximation(vector<KeyFrame*> vScaleGravityKF,cv:
 
  //   cout<<"2!"<<endl;
     cv::Mat J2=-A;
-    cv::Mat IM=(J2.t()*J2).inv();
-    finf2<<cv::determinant(IM)<<endl;
+    cv::Mat IM2=J2.t()*J2;
+    Eigen::Matrix<double,7,7> IMEigen2=Converter::toMatrix7d(IM2);
+    finf2<<IMEigen2.trace()<<endl;
  //   cout<<"2222222"<<endl;
     
     cv::Mat w,u,vt;
@@ -1507,7 +1523,8 @@ bool LocalMapping::ScaleGwBaPcbRefine(vector<KeyFrame*> vScaleGravityKF,cv::Mat 
   //  cout<<"3!"<<endl;
     cv::Mat J3=-C;
     cv::Mat IM3=(J3.t()*J3);
-    finf3<<cv::determinant(IM3)<<endl;
+    Eigen::Matrix<double,9,9> IMEigen3=Converter::toMatrix9d(IM3);
+    finf3<<IMEigen3.trace()<<endl;
   //  cout<<"32"<<endl;
     // Use svd to compute C*x=D, x=[s,dthetaxy,ba] 6x1 vector
     // C = u*w*vt, u*w*vt*x=D
@@ -2750,8 +2767,8 @@ void LocalMapping::Run()
                      else
                      {
 			 std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-		         //tmpbool=TryInitVIOWithoutPreCalibration();
-			 tmpbool = TryInitVIO();//单目的vio初始化
+		         tmpbool=TryInitVIOWithoutPreCalibration();
+			// tmpbool = TryInitVIO();//单目的vio初始化
 			 std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 			 double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 			 fInitCalibTime<<t<<endl;

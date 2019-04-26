@@ -1,0 +1,6 @@
+<launch>
+
+ 	<node pkg="ORB_VIO" type="STEREO_VIO" name="STEREO_VIO"  args="$(find ORB_VIO)/../../../Vocabulary/ORBvoc.bin $(find ORB_VIO)/../../../config/stereoVI.yaml" cwd="node" output="screen">
+	</node>
+
+</launch>

@@ -262,7 +262,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         # environment at generation time
-        CMAKE_PREFIX_PATH = '/home/shenyl/catkin_ws/src/onlineCalibration/Examples/ROS/ORB_VIO/build/devel;/home/shenyl/catkin_ws/src/MYNT-EYE-S-SDK/wrappers/ros/devel;/opt/ros/kinetic'.split(';')
+        CMAKE_PREFIX_PATH = '/home/shenyl/catkin_ws/src/onlineCalibration/Examples/ROS/ORB_VIO/build/devel;/opt/ros/kinetic'.split(';')
         # prepend current workspace if not already part of CPP
         base_path = os.path.dirname(__file__)
         if base_path not in CMAKE_PREFIX_PATH:
