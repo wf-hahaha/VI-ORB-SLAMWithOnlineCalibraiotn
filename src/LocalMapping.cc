@@ -36,6 +36,7 @@ namespace ORB_SLAM2
     cv::Mat pbc_true;
     cv::Mat Rcb_true;
     cv::Mat pcb_true;
+    
   //syl***add  end
 //syl***add for online calibration
 //含VI外餐标定的单目视觉惯性联合初始化
@@ -46,7 +47,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
         return false;
   
   static bool fopened = false;
-  static ofstream fgw,fscale,fbiasa,ftime1,ftime2,ftime3,fbiasg,fpcb,feul,finf1,finf2,finf3;
+  static ofstream fgw,fscale,fbiasa,ftime1,ftime2,ftime3,fbiasg,fpcb,feul,finf1,finf2,finf3,fRotation;
   static bool YPRFinish=false,PcbScaleFinish=false;
   static bool firstInit=true;
   float thr1=0.1;  //用于判断VI旋转角是否收敛
@@ -55,8 +56,8 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
   //float thr2=0.3;
   float thr3=0.02; //用于判断尺度因子scale是否收敛  
   //float thr3=0.4;
-  int Nwin=10;    //用于判断旋转角,偏移角和尺度因子是否收敛的窗口
-  int Nwin2=40;  //添加窗口的大小
+  int Nwin=15;    //用于判断旋转角,偏移角和尺度因子是否收敛的窗口
+  static int Nwin2=10;  //添加窗口的大小
   
   if(!fopened)
     {
@@ -74,6 +75,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
 	finf1.open(tmpfilepath+"finf1.txt");
 	finf2.open(tmpfilepath+"finf2.txt");
 	finf3.open(tmpfilepath+"finf3.txt");
+	fRotation.open(tmpfilepath+"Rotaiton.txt");
         if(fgw.is_open() && fscale.is_open() && fbiasa.is_open()
 	  && ftime1.is_open()&& ftime2.is_open()&& ftime3.is_open()&& fbiasg.is_open()
 	  &&fpcb.is_open()&& feul.is_open()
@@ -124,7 +126,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     {
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
       YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
+   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -148,7 +150,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     {
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
       YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1);
+   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -177,7 +179,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
       //假设ba=0,求解scale，gw,pcb
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
       ScaleGwPcbApproximationWithInfoWin(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2,Nwin2);
-    //  ScaleGwPcbApproximation(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2);
+   //   ScaleGwPcbApproximation(vScaleGravityKF,Rcb,sstar,gwstar,pcb_c,finf2);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime2<<t<<endl;
@@ -186,7 +188,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
       //引入重力大小的约束，求解scale,gw,ba,pcb_refined
       t1 = std::chrono::steady_clock::now();
       PcbScaleFinish=ScaleGwBaPcbRefineWithInfoWin(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3,Nwin2);
-     // PcbScaleFinish=ScaleGwBaPcbRefine(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3);
+    //  PcbScaleFinish=ScaleGwBaPcbRefine(vScaleGravityKF,gwstar,Rcb,s_,gwafter_,dbiasa_,Nwin,thr2,thr3,fpcb,finf3);
       t2 = std::chrono::steady_clock::now();
       t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime3<<t<<endl; 
@@ -317,7 +319,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
      
 }
 
-bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,int Nwin2)
+bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,int &Nwin2)
 {
   int N = vScaleGravityKF.size();
   cv::Mat I3 = cv::Mat::eye(3,3,CV_32F); 
@@ -331,10 +333,11 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
   static Eigen::Matrix3d Rbc_cEigen;
   static cv::Mat Rbc_c=cv::Mat::eye(3,3,CV_32F); 
   static cv::Mat qbc_c=cv::Mat::zeros(4,1,CV_32F);
+  float info;
   //static bool init=1;
   
   //for informative window
-   cv::Mat Q=cv::Mat::zeros(4*Nwin2,4,CV_32F);
+   static cv::Mat Q=cv::Mat::zeros(4*Nwin2,4,CV_32F);
    cv::Mat Qfinal=cv::Mat::zeros(4*(N-1),4,CV_32F);   //固定用于计算的Q的维度，避免计算量随时间线性增长
    float *INFO=new float[Nwin2];
    for(int i=0;i<Nwin2;i++)
@@ -425,7 +428,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
   //    cout<<"Ji"<<Ji<<endl;
         Eigen::Matrix<double,4,4> IMiEigen=Converter::toMatrix4d(Ji.t()*Ji);
   //    cout<<"IMiEigen"<<IMiEigen<<endl;
-        float info=IMiEigen.trace();
+        info=IMiEigen.trace();
   //    cout<<"info"<<info<<endl;
       if(i==0)  //第一个数直接放在第一个位置
       {
@@ -518,6 +521,7 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
 	    }
 	   }//else end
 	}//if end
+	
       }
    //   cout<<"11"<<endl;
     //  Qi.copyTo(Q.rowRange(4*(i-0)+0,4*(i-0)+4).colRange(0,4));
@@ -528,11 +532,17 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
    //   finf1<<cv::determinant(IMi)<<endl;//值越小，包含的信息量越大
       
   //    cout<<"Q=:"<<Q<<endl;
+  //      cout<<"N=:"<<N<<endl;
+  //      for(int i=0;i<Nwin2;i++)
+//	{
+//	  cout<<INFO[i]<<endl;
+//	}
     }
-    for(int i=0;i<Nwin2;i++)
+ /*   for(int i=0;i<Nwin2;i++)
     {
         cout<<INFO[i]<<endl;
-    }
+    }*/
+  //  finf1<<info<<endl;
     delete[] INFO;
  //   cout<<"1!"<<endl;
        cv::Mat J;
@@ -550,9 +560,11 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
       cv::Mat IM=(J.t()*J);
    //   cout<<"IM"<<IM<<endl;
    //   cout<<"information count "<<cv::determinant(IM)<<endl;
-      Eigen::Matrix<double,4,4> IMEigen=Converter::toMatrix4d(IM);
+      Eigen::Matrix<double,4,4> IMEigen=(Converter::toMatrix4d(IM));
       finf1<<IMEigen.trace()<<endl;  
-      cout<<"12"<<endl;
+
+      
+  //    cout<<"12"<<endl;
   //    fQ<<Q<<endl;
   //    fq<<mpCurrentKeyFrame->mTimeStamp-mnStartTime<<"\t"
   //      <<xb<<"\t"<<yb<<"\t"<<zb<<"\t"<<Sb<<"\t"
@@ -560,14 +572,14 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
       //用svd解Q*qbc=0;
       //Q=u1*w1*vt1
       cv::Mat w1,u1,vt1;
-    //  cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::FULL_UV);
+    //  cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::FULL_UV);cv::SVD::MODIFY_A
       if(N<=Nwin2)
       {
-	cv::SVDecomp(Qfinal,w1,u1,vt1,cv::SVD::MODIFY_A);
+	cv::SVDecomp(Qfinal,w1,u1,vt1,cv::SVD::FULL_UV);
       }
       else
       {
-	cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::MODIFY_A);
+	cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::FULL_UV);
       }
       cout<<"13"<<endl;
    //   cout<<"u1=:"<<u1<<endl;
@@ -602,6 +614,12 @@ bool LocalMapping::VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGrav
     
     ConfigParam::SetRbc(Rbc_cEigen);
     feul<<eulc(0,0)<<"\t"<<eulc(1,0)<<"\t"<<eulc(2,0)<<endl;
+    if(IMEigen.trace()<0.01)
+    {
+      cout<<"not enough information!"<<endl;
+      return false;
+    }
+    
     bool YPRFinish=false;
     YPRFinish=CheckVIRotationConvergence(Nwin,thr);
     
@@ -809,10 +827,10 @@ bool LocalMapping::ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGr
  //  cout<<"21"<<endl;
     }
     
-    for(int i=0;i<Nwin2;i++)
+ /*   for(int i=0;i<Nwin2;i++)
     {
        cout<<INFO2[i]<<endl;
-    }
+    }*/
     delete [] INFO2;
  //   cout<<"2!"<<endl;
     cv::Mat J2=-A;
@@ -1099,10 +1117,10 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
         // Debug log
         //cout<<"iter "<<i<<endl;
     }
-    	for(int i=0;i<Nwin3;i++)
+  /*  	for(int i=0;i<Nwin3;i++)
 	{
 	  cout<<INFO3[i]<<endl;
-	}
+	}*/
     delete [] INFO3;
   //  cout<<"3!"<<endl;
     cv::Mat J3=-C;
@@ -1184,7 +1202,7 @@ bool LocalMapping::ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravity
     
 }
 
-bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1)
+bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,ofstream &fRotation)
 {
   int N = vScaleGravityKF.size();
   cv::Mat I3 = cv::Mat::eye(3,3,CV_32F); 
@@ -1199,7 +1217,7 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
   static cv::Mat Rbc_c=cv::Mat::eye(3,3,CV_32F); 
   static cv::Mat qbc_c=cv::Mat::zeros(4,1,CV_32F);
   //static bool init=1;
-  
+  Eigen::Matrix3d dRcEigen;
   
   float Sb;
   float xb;
@@ -1226,14 +1244,15 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
    //   cout<<"Rc1"<<Rc1<<endl;
    //   cout<<"dRc"<<dRc<<endl;
           
-      Eigen::Matrix3d dRcEigen=Converter::toMatrix3d(dRc);
+       dRcEigen=Converter::toMatrix3d(dRc);
+      
    //   cout<<"eulrc=:"<<eulrc<<endl;
       cv::Mat pc1=Twc1.rowRange(0,3).col(3);
    //   cout<<"pc1"<<endl<<pc1<<endl;
       cv::Mat pc2=Twc2.rowRange(0,3).col(3);
    //   cout<<"pc2"<<endl<<pc2<<endl;
       cv::Mat dpc=pc2-pc1;
-      cout<<"dpc"<<endl<<dpc<<endl;
+   //   cout<<"dpc"<<endl<<dpc<<endl;
       
       
       Eigen::Quaterniond qc = Eigen::Quaterniond ( dRcEigen );
@@ -1252,8 +1271,8 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
       
       cv::Mat dpb = Converter::toCvMat(pKF2->GetIMUPreInt().getDeltaP());
       cv::Mat sdpc=dpb-(Rc2-Rc1)*pcb_true;
-      cout<<"sdpc"<<endl<<dpb<<endl;
-      cout<<"s"<<endl<<sdpc.at<float>(0)/dpc.at<float>(0)<<"\t"<<sdpc.at<float>(1)/dpc.at<float>(1)<<"\t"<<sdpc.at<float>(2)/dpc.at<float>(2)<<endl;
+   //   cout<<"sdpc"<<endl<<dpb<<endl;
+  //    cout<<"s"<<endl<<sdpc.at<float>(0)/dpc.at<float>(0)<<"\t"<<sdpc.at<float>(1)/dpc.at<float>(1)<<"\t"<<sdpc.at<float>(2)/dpc.at<float>(2)<<endl;
       
       
       
@@ -1292,6 +1311,10 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
       Qi.copyTo(Q.rowRange(4*(i-0)+0,4*(i-0)+4).colRange(0,4));
   //    cout<<"Q=:"<<Q<<endl;
     }
+    
+   //   Eigen::Vector3d Rotation=(dRcEigen.eulerAngles(2,1,0))*180/PI;
+   //   cout<<"Rotation"<<endl<<Rotation<<endl;
+   //   fRotation<<Rotation(1)<<"\t"<<Rotation(2)<<"\t"<<Rotation(3)<<endl;
  
       cv::Mat J=-Q;
    //   cout<<"J"<<J<<endl;
@@ -1304,7 +1327,9 @@ bool LocalMapping::VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int N
       //用svd解Q*qbc=0;
       //Q=u1*w1*vt1
       cv::Mat w1,u1,vt1;
-      cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::MODIFY_A);
+   //   cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::MODIFY_A);
+      cv::SVDecomp(Q,w1,u1,vt1,cv::SVD::FULL_UV);
+      
    //   cout<<"13"<<endl;   
       vt1=vt1.t();
       qbc_c=vt1.col(3);     //[x,y,z,w]

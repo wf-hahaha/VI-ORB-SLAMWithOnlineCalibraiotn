@@ -1160,7 +1160,7 @@ void Tracking::MonocularInitialization()
         mvIMUSinceLastKF.clear();
 
         // Set Reference Frame
-        if (mCurrentFrame.mvKeys.size() > 100)
+        if (mCurrentFrame.mvKeys.size() > 80)//syl***change for outdoor
         {
             mInitialFrame = Frame(mCurrentFrame);
             mLastFrame = Frame(mCurrentFrame);
@@ -1181,7 +1181,7 @@ void Tracking::MonocularInitialization()
     else
     {
         // Try to initialize
-        if ((int)mCurrentFrame.mvKeys.size() <= 100)
+        if ((int)mCurrentFrame.mvKeys.size() <= 80)//syl***change for outdoor
         {
             delete mpInitializer;
             mpInitializer = static_cast<Initializer*>(NULL);
@@ -1194,7 +1194,7 @@ void Tracking::MonocularInitialization()
         int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, mvbPrevMatched, mvIniMatches, 100);
 
         // Check if there are enough correspondences
-        if (nmatches < 100)
+        if (nmatches < 80)                        //syl***change for outdoor
         {
             delete mpInitializer;
             mpInitializer = static_cast<Initializer*>(NULL);
@@ -1297,7 +1297,7 @@ void Tracking::CreateInitialMapMonocular()
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
     float invMedianDepth = 1.0f / medianDepth;
 
-    if (medianDepth < 0 || pKFcur->TrackedMapPoints(1) < 100)
+    if (medianDepth < 0 || pKFcur->TrackedMapPoints(1) < 80)
     {
         cout << "Wrong initialization, reseting..." << endl;
         Reset();

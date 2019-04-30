@@ -170,11 +170,11 @@ protected:
 public:
   bool TryInitVIOWithoutPreCalibration(void);
   
-  bool VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,int Nwin2);
+  bool VIRotationCalibrationWithInfoWin(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,int &Nwin2);
   bool ScaleGwPcbApproximationWithInfoWin(vector<KeyFrame*> vScaleGravityKF,cv::Mat Rcb/*,ofstream &finf2*/,double &sstar,cv::Mat &gwstar,cv::Mat pcb_c,ofstream &finf2,int Nwin2);
   bool ScaleGwBaPcbRefineWithInfoWin(vector<KeyFrame*> vScaleGravityKF,cv::Mat gwstar,cv::Mat Rcb,double &s_,cv::Mat &gwafter_,cv::Mat &dbiasa_,int Nwin,float thr2,float thr3,ofstream &fpcb,ofstream &finf3,int Nwin2);
   
-  bool VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1);
+  bool VIRotationCalibration(vector<KeyFrame*> vScaleGravityKF,int Nwin,float thr,ofstream &feul,ofstream &finf1,ofstream &fRotation);
   bool ScaleGwPcbApproximation(vector<KeyFrame*> vScaleGravityKF,cv::Mat Rcb/*,ofstream &finf2*/,double &sstar,cv::Mat &gwstar,cv::Mat pcb_c,ofstream &finf2);
   bool ScaleGwBaPcbRefine(vector<KeyFrame*> vScaleGravityKF,cv::Mat gwstar,cv::Mat Rcb,double &s_,cv::Mat &gwafter_,cv::Mat &dbiasa_,int Nwin,float thr2,float thr3,ofstream &fpcb,ofstream &finf3);
   
