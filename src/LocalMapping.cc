@@ -57,7 +57,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
   float thr3=0.02; //用于判断尺度因子scale是否收敛  
   //float thr3=0.4;
   int Nwin=15;    //用于判断旋转角,偏移角和尺度因子是否收敛的窗口
-  static int Nwin2=10;  //添加窗口的大小
+  static int Nwin2=12;  //添加窗口的大小
   
   if(!fopened)
     {
@@ -126,7 +126,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     {
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
       YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
+    //  YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -134,23 +134,24 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     }
     
     
-    //bg初始化
-    bgest = Optimizer::OptimizeInitialGyroBias(vScaleGravityKF);
-    for(vector<KeyFrame*>::const_iterator vit=vScaleGravityKF.begin(), vend=vScaleGravityKF.end(); vit!=vend; vit++)
+
+    if(YPRFinish==false)
     {
-        KeyFrame* pKF = *vit;
-        pKF->SetNavStateBiasGyr(bgest);
-    }
-    for(vector<KeyFrame*>::const_iterator vit=vScaleGravityKF.begin(), vend=vScaleGravityKF.end(); vit!=vend; vit++)
-    {
-        KeyFrame* pKF = *vit;
-        pKF->ComputePreInt();
-    } 
-    
-    {
+          //bg初始化
+      bgest = Optimizer::OptimizeInitialGyroBias(vScaleGravityKF);
+      for(vector<KeyFrame*>::const_iterator vit=vScaleGravityKF.begin(), vend=vScaleGravityKF.end(); vit!=vend; vit++)
+      {
+          KeyFrame* pKF = *vit;
+          pKF->SetNavStateBiasGyr(bgest);
+      }
+      for(vector<KeyFrame*>::const_iterator vit=vScaleGravityKF.begin(), vend=vScaleGravityKF.end(); vit!=vend; vit++)
+      {
+          KeyFrame* pKF = *vit;
+          pKF->ComputePreInt();
+      } 
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
       YPRFinish=VIRotationCalibrationWithInfoWin(vScaleGravityKF,Nwin,thr1,feul,finf1,Nwin2);
-   //   YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
+    //  YPRFinish=VIRotationCalibration(vScaleGravityKF,Nwin,thr1,feul,finf1,fRotation);
       std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
       double t = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
       ftime1<<t<<endl;
@@ -174,7 +175,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
     cv::Mat Rcb = Rbc.t();
     
     //VI偏移量标定和初始化    
- //   if(PcbScaleFinish==false)
+    if(YPRFinish==true)
     {
       //假设ba=0,求解scale，gw,pcb
       std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -195,7 +196,14 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
       cout<<"333333333"<<endl;
     }
     
-        // Debug log
+    
+    // Debug log 
+    if(YPRFinish==false)    
+    {   
+    fbiasg<<mpCurrentKeyFrame->mTimeStamp<<"\t"
+	  <<bgest(0)<<"\t"<<bgest(1)<<"\t"<<bgest(2)<<"\t"<<endl;   
+    }
+    if(YPRFinish==true)    
     {
 
         cout<<"Time: "<<mpCurrentKeyFrame->mTimeStamp - mnStartTime<<", sstar: "<<sstar<<", s: "<<s_<<endl;
@@ -209,8 +217,7 @@ bool LocalMapping::TryInitVIOWithoutPreCalibration(void)
      //   fcondnum<<w2.at<float>(1)/w2.at<float>(5)<<endl;
         //        ftime<<mpCurrentKeyFrame->mTimeStamp<<"\t"
         //             <<(t3-t0)/cv::getTickFrequency()*1000<<"\t"<<endl;
-        fbiasg<<mpCurrentKeyFrame->mTimeStamp<<"\t"
-              <<bgest(0)<<"\t"<<bgest(1)<<"\t"<<bgest(2)<<"\t"<<endl;
+
     }
 
     bool bVIOInited = false;
